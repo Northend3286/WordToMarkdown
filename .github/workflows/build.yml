@@ -36,7 +36,7 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller -F Word批量转Markdown.py
+          pyinstaller -F WordToMarkdown.py
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
