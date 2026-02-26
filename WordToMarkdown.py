@@ -1,47 +1,40 @@
 import os
-import subprocess
 import sys
+from pathlib import Path
 
-def get_pandoc_path():
-    if getattr(sys, 'frozen', False):
-        base_path = sys._MEIPASS
-    else:
-        base_path = os.path.dirname(__file__)
-    return os.path.join(base_path, "pandoc.exe")
+try:
+    import pypandoc
+except ImportError:
+    print("未安装 pypandoc，请先安装 Pandoc 和 pypandoc")
+    sys.exit(1)
 
-def convert_docx(filepath):
-    filename, _ = os.path.splitext(filepath)
-    output_file = filename + ".md"
-    media_dir = filename + "_media"  # 图片输出目录
-    os.makedirs(media_dir, exist_ok=True)
-    pandoc_path = get_pandoc_path()
-    subprocess.run([
-        pandoc_path,
-        filepath,
-        "-o", output_file,
-        "--extract-media", media_dir
-    ], check=True)
+# 获取 exe 或脚本所在目录
+if getattr(sys, 'frozen', False):
+    # PyInstaller 打包后
+    base_dir = Path(sys.executable).parent
+else:
+    # 普通 Python
+    base_dir = Path(__file__).parent
 
-def main():
-    print("=== Word 批量转 Markdown 工具 ===\n")
+# 输出目录
+output_dir = base_dir / "Markdown_output"
+output_dir.mkdir(exist_ok=True)
 
-    current_dir = os.getcwd()
-    files = os.listdir(current_dir)
+# 支持的文件类型
+extensions = [".docx", ".pdf"]
 
-    docx_files = [f for f in files if f.lower().endswith(".docx")]
+# 遍历目录中的文件
+for file in base_dir.iterdir():
+    if file.suffix.lower() in extensions:
+        md_name = output_dir / (file.stem + ".md")
+        try:
+            # 使用 pypandoc 转换
+            output = pypandoc.convert_file(str(file), 'md', format='docx' if file.suffix.lower() == '.docx' else 'pdf')
+            with md_name.open("w", encoding="utf-8") as f:
+                f.write(output)
+            print(f"生成: {md_name.name}")
+        except Exception as e:
+            print(f"转换失败: {file.name}, 错误: {e}")
 
-    if not docx_files:
-        print("当前文件夹没有找到 .docx 文件")
-        input("\n按回车键退出...")
-        return
-
-    print(f"找到 {len(docx_files)} 个 Word 文件，开始转换...\n")
-
-    for file in docx_files:
-        convert_docx(file)
-
-    print("\n全部转换完成！")
-    input("\n按回车键退出...")
-
-if __name__ == "__main__":
-    main()
+print(f"\n所有文件已处理完成，输出目录: {output_dir}")
+input("按 Enter 键退出...")
